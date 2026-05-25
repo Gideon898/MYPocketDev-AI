@@ -1,86 +1,51 @@
-const chatBox =
-document.getElementById("chatBox");
+const messages = document.getElementById("messages");
+const input = document.getElementById("input");
 
-const userInput =
-document.getElementById("userInput");
+// LOCAL MEMORY (SESSION)
+let chatHistory = [];
 
-const sendBtn =
-document.getElementById("sendBtn");
-
-sendBtn.addEventListener(
-  "click",
-  sendMessage
-);
-
-async function sendMessage(){
-
-  const message =
-  userInput.value.trim();
-
-  if(!message) return;
-
-  document.querySelector(".welcome")
-  ?.remove();
-
-  addMessage(message, "user");
-
-  userInput.value = "";
-
-  const botDiv =
-  addMessage("Thinking...", "bot");
-
-  try{
-
-    const response =
-    await fetch("/api/chat", {
-
-      method:"POST",
-
-      headers:{
-        "Content-Type":
-        "application/json"
-      },
-
-      body:JSON.stringify({
-        message
-      })
-    });
-
-    const data =
-    await response.json();
-
-    botDiv.innerText =
-      data.reply ||
-      data.error ||
-      "No response.";
-
-  }
-
-  catch(error){
-
-    console.log(error);
-
-    botDiv.innerText =
-    "Server error.";
-  }
+function add(text, type){
+  const div = document.createElement("div");
+  div.className = "msg " + type;
+  div.innerText = text;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+  return div;
 }
 
-function addMessage(text, type){
+async function send(){
 
-  const div =
-  document.createElement("div");
+  const text = input.value.trim();
+  if(!text) return;
 
-  div.classList.add(
-    "message",
-    type
-  );
+  add(text, "user");
+  input.value = "";
 
-  div.innerText = text;
+  const botDiv = add("thinking...", "bot");
 
-  chatBox.appendChild(div);
+  // ADD USER MESSAGE TO MEMORY
+  chatHistory.push({
+    role: "user",
+    content: text
+  });
 
-  chatBox.scrollTop =
-  chatBox.scrollHeight;
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: chatHistory
+    })
+  });
 
-  return div;
+  const data = await res.json();
+
+  const reply = data.reply || "error";
+
+  botDiv.innerText = reply;
+
+  // ADD AI RESPONSE TO MEMORY
+  chatHistory.push({
+    role: "assistant",
+    content: reply
+  });
 }
